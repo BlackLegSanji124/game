@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="./assets/css/init.css">
+    <script src="./assets/phaser/dist/phaser.min.js"></script>
+</head>
+
+<body>
+
+    <script>
+
+        const bg_width = 5522;
+        const bg_height = 1338;
+
+        const DEFAULT_WIDTH = window.innerWidth;
+        const DEFAULT_HEIGHT = window.innerHeight;
+
+        const scale_rate = DEFAULT_WIDTH / bg_width;
+        const player_scale_rate = scale_rate * 0.7;
+        const enemy_scale_rate = scale_rate * 0.5;
+
+        let img_source = 'assets/imgs/level1';
+        let audio_source = 'assets/audios';
+
+        const speedHori = 200;
+        const speedVert = 200;
+
+        let mainCollider;
+
+        let player;
+        let npc;
+        let enemies = [];
+        let bullets;
+
+        let score = 0;
+        let scoreText;
+        let look_direction = 1;
+
+        let hp_player_full;
+        let hp_enemy_full;
+
+        let hp_player;
+        let hp_enemies;
+
+        let platforms;
+        let ladders;
+        let cursors;
+
+        let gameOver = false;
+
+        let sound_env;
+
+        const frameRate = 10;
+        const frameRepeat = -1;
+        const spawns = [
+            { x: 1900, y: 1050, num: 3, xStart: 1590, xEnd: 2130 },
+            { x: 2945, y: 990, num: 3, xStart: 2520, xEnd: 3260 },
+            { x: 4500, y: 1110, num: 4, xStart: 3900, xEnd: 4860 },
+            { x: 5300, y: 990, num: 2, xStart: 5180, xEnd: 5440 },
+            { x: 355, y: 570, num: 2, xStart: 230, xEnd: 760 },
+            { x: 1460, y: 510, num: 2, xStart: 1260, xEnd: 1640 },
+            { x: 2000, y: 630, num: 2, xStart: 1800, xEnd: 2220 },
+            { x: 3760, y: 510, num: 2, xStart: 3400, xEnd: 4100 },
+            { x: 3750, y: 780, num: 2, xStart: 3520, xEnd: 3940 },
+            { x: 4830, y: 510, num: 2, xStart: 4720, xEnd: 5080 }
+        ];
+
+        let isClimbing = false;
+        let isAttackAnimating = false;
+
+        class SceneA extends Phaser.Scene {
+
+            constructor() {
+                super({ key: 'GameScene' })
+            }
+
+            preload() {
+
+                this.load.audio('sound_env', audio_source + '/sound_env.mp3');
+
+                this.load.image('bg', img_source + '/bg/bg.png');
+
+                this.load.image('player_left_alert_0', img_source + '/character/left/alert_0.png');
+                this.load.image('player_left_alert_1', img_source + '/character/left/alert_1.png');
+                this.load.image('player_left_alert_2', img_source + '/character/left/alert_2.png');
+                this.load.image('player_left_alert_3', img_source + '/character/left/alert_3.png');
+
+                this.load.image('player_left_fly_0', img_source + '/character/left/fly_0.png');
+                this.load.image('player_left_fly_1', img_source + '/character/left/fly_1.png');
+                this.load.image('player_left_fly_2', img_source + '/character/left/fly_2.png');
+
+                this.load.image('player_left_jump_0', img_source + '/character/left/jump_0.png');
+                this.load.image('player_left_jump_1', img_source + '/character/left/jump_1.png');
+
+                this.load.image('player_left_prone_0', img_source + '/character/left/prone_0.png');
+                this.load.image('player_left_prone_1', img_source + '/character/left/prone_1.png');
+
+                this.load.image('player_left_proneStab_0', img_source + '/character/left/proneStab_0.png');
+                this.load.image('player_left_proneStab_1', img_source + '/character/left/proneStab_1.png');
+                this.load.image('player_left_proneStab_2', img_source + '/character/left/proneStab_2.png');
+
+                this.load.image('player_left_shoot1_0', img_source + '/character/left/shoot1_0.png');
+                this.load.image('player_left_shoot1_1', img_source + '/character/left/shoot1_1.png');
+                this.load.image('player_left_shoot1_2', img_source + '/character/left/shoot1_2.png');
+                this.load.image('player_left_shoot1_3', img_source + '/character/left/shoot1_3.png');
+
+                this.load.image('player_left_shootF_0', img_source + '/character/left/shootF_0.png');
+                this.load.image('player_left_shootF_1', img_source + '/character/left/shootF_1.png');
+                this.load.image('player_left_shootF_2', img_source + '/character/left/shootF_2.png');
+                this.load.image('player_left_shootF_3', img_source + '/character/left/shootF_3.png');
+
+                this.load.image('player_left_stabO1_0', img_source + '/character/left/stabO1_0.png');
+                this.load.image('player_left_stabO1_1', img_source + '/character/left/stabO1_1.png');
+                this.load.image('player_left_stabO1_2', img_source + '/character/left/stabO1_2.png');
+
+                this.load.image('player_left_stabO2_0', img_source + '/character/left/stabO2_0.png');
+                this.load.image('player_left_stabO2_1', img_source + '/character/left/stabO2_1.png');
+                this.load.image('player_left_stabO2_2', img_source + '/character/left/stabO2_2.png');
+
+                this.load.image('player_left_stand1_0', img_source + '/character/left/stand1_0.png');
+                this.load.image('player_left_stand1_1', img_source + '/character/left/stand1_1.png');
+                this.load.image('player_left_stand1_2', img_source + '/character/left/stand1_2.png');
+                this.load.image('player_left_stand1_3', img_source + '/character/left/stand1_3.png');
+
+                this.load.image('player_left_swingO1_0', img_source + '/character/left/swingO1_0.png');
+                this.load.image('player_left_swingO1_1', img_source + '/character/left/swingO1_1.png');
+                this.load.image('player_left_swingO1_2', img_source + '/character/left/swingO1_2.png');
+                this.load.image('player_left_swingO1_3', img_source + '/character/left/swingO1_3.png');
+
+                this.load.image('player_left_swingO2_0', img_source + '/character/left/swingO2_0.png');
+                this.load.image('player_left_swingO2_1', img_source + '/character/left/swingO2_1.png');
+                this.load.image('player_left_swingO2_2', img_source + '/character/left/swingO2_2.png');
+                this.load.image('player_left_swingO2_3', img_source + '/character/left/swingO2_3.png');
+
+                this.load.image('player_left_swingO3_0', img_source + '/character/left/swingO3_0.png');
+                this.load.image('player_left_swingO3_1', img_source + '/character/left/swingO3_1.png');
+                this.load.image('player_left_swingO3_2', img_source + '/character/left/swingO3_2.png');
+                this.load.image('player_left_swingO3_3', img_source + '/character/left/swingO3_3.png');
+
+                this.load.image('player_left_walk1_0', img_source + '/character/left/walk1_0.png');
+                this.load.image('player_left_walk1_1', img_source + '/character/left/walk1_1.png');
+                this.load.image('player_left_walk1_2', img_source + '/character/left/walk1_2.png');
+                this.load.image('player_left_walk1_3', img_source + '/character/left/walk1_3.png');
+                this.load.image('player_left_walk1_4', img_source + '/character/left/walk1_4.png');
+
+                ////////////////////////// right images
+
+                this.load.image('player_right_alert_0', img_source + '/character/right/alert_0.png');
+                this.load.image('player_right_alert_1', img_source + '/character/right/alert_1.png');
+                this.load.image('player_right_alert_2', img_source + '/character/right/alert_2.png');
+                this.load.image('player_right_alert_3', img_source + '/character/right/alert_3.png');
+
+                this.load.image('player_right_fly_0', img_source + '/character/right/fly_0.png');
+                this.load.image('player_right_fly_1', img_source + '/character/right/fly_1.png');
+                this.load.image('player_right_fly_2', img_source + '/character/right/fly_2.png');
+
+                this.load.image('player_right_jump_0', img_source + '/character/right/jump_0.png');
+                this.load.image('player_right_jump_1', img_source + '/character/right/jump_1.png');
+
+                this.load.image('player_right_prone_0', img_source + '/character/right/prone_0.png');
+                this.load.image('player_right_prone_1', img_source + '/character/right/prone_1.png');
+
+                this.load.image('player_right_proneStab_0', img_source + '/character/right/proneStab_0.png');
+                this.load.image('player_right_proneStab_1', img_source + '/character/right/proneStab_1.png');
+                this.load.image('player_right_proneStab_2', img_source + '/character/right/proneStab_2.png');
+
+                this.load.image('player_right_shoot1_0', img_source + '/character/right/shoot1_0.png');
+                this.load.image('player_right_shoot1_1', img_source + '/character/right/shoot1_1.png');
+                this.load.image('player_right_shoot1_2', img_source + '/character/right/shoot1_2.png');
+                this.load.image('player_right_shoot1_3', img_source + '/character/right/shoot1_3.png');
+
+                this.load.image('player_right_shootF_0', img_source + '/character/right/shootF_0.png');
+                this.load.image('player_right_shootF_1', img_source + '/character/right/shootF_1.png');
+                this.load.image('player_right_shootF_2', img_source + '/character/right/shootF_2.png');
+                this.load.image('player_right_shootF_3', img_source + '/character/right/shootF_3.png');
+
+                this.load.image('player_right_stabO1_0', img_source + '/character/right/stabO1_0.png');
+                this.load.image('player_right_stabO1_1', img_source + '/character/right/stabO1_1.png');
+                this.load.image('player_right_stabO1_2', img_source + '/character/right/stabO1_2.png');
+
+                this.load.image('player_right_stabO2_0', img_source + '/character/right/stabO2_0.png');
+                this.load.image('player_right_stabO2_1', img_source + '/character/right/stabO2_1.png');
+                this.load.image('player_right_stabO2_2', img_source + '/character/right/stabO2_2.png');
+
+                this.load.image('player_right_stand1_0', img_source + '/character/right/stand1_0.png');
+                this.load.image('player_right_stand1_1', img_source + '/character/right/stand1_1.png');
+                this.load.image('player_right_stand1_2', img_source + '/character/right/stand1_2.png');
+                this.load.image('player_right_stand1_3', img_source + '/character/right/stand1_3.png');
+
+                this.load.image('player_right_swingO1_0', img_source + '/character/right/swingO1_0.png');
+                this.load.image('player_right_swingO1_1', img_source + '/character/right/swingO1_1.png');
+                this.load.image('player_right_swingO1_2', img_source + '/character/right/swingO1_2.png');
+                this.load.image('player_right_swingO1_3', img_source + '/character/right/swingO1_3.png');
+
+                this.load.image('player_right_swingO2_0', img_source + '/character/right/swingO2_0.png');
+                this.load.image('player_right_swingO2_1', img_source + '/character/right/swingO2_1.png');
+                this.load.image('player_right_swingO2_2', img_source + '/character/right/swingO2_2.png');
+                this.load.image('player_right_swingO2_3', img_source + '/character/right/swingO2_3.png');
+
+                this.load.image('player_right_swingO3_0', img_source + '/character/right/swingO3_0.png');
+                this.load.image('player_right_swingO3_1', img_source + '/character/right/swingO3_1.png');
+                this.load.image('player_right_swingO3_2', img_source + '/character/right/swingO3_2.png');
+                this.load.image('player_right_swingO3_3', img_source + '/character/right/swingO3_3.png');
+
+                this.load.image('player_right_walk1_0', img_source + '/character/right/walk1_0.png');
+                this.load.image('player_right_walk1_1', img_source + '/character/right/walk1_1.png');
+                this.load.image('player_right_walk1_2', img_source + '/character/right/walk1_2.png');
+                this.load.image('player_right_walk1_3', img_source + '/character/right/walk1_3.png');
+                this.load.image('player_right_walk1_4', img_source + '/character/right/walk1_4.png');
+
+                this.load.image('player_climb', img_source + '/character/right/climb.png');
+
+
+                ///////////////////////////////enemy left images
+                this.load.image('enemy_left_attack1_0', img_source + '/enemy/left/attack1_0.png');
+                this.load.image('enemy_left_attack1_1', img_source + '/enemy/left/attack1_1.png');
+                this.load.image('enemy_left_attack1_2', img_source + '/enemy/left/attack1_2.png');
+                this.load.image('enemy_left_attack1_3', img_source + '/enemy/left/attack1_3.png');
+                this.load.image('enemy_left_attack1_4', img_source + '/enemy/left/attack1_4.png');
+                this.load.image('enemy_left_attack1_5', img_source + '/enemy/left/attack1_5.png');
+                this.load.image('enemy_left_attack1_6', img_source + '/enemy/left/attack1_6.png');
+                this.load.image('enemy_left_attack1_7', img_source + '/enemy/left/attack1_7.png');
+                this.load.image('enemy_left_attack1_8', img_source + '/enemy/left/attack1_8.png');
+                this.load.image('enemy_left_attack1_9', img_source + '/enemy/left/attack1_9.png');
+                this.load.image('enemy_left_attack1_10', img_source + '/enemy/left/attack1_10.png');
+                this.load.image('enemy_left_attack1_11', img_source + '/enemy/left/attack1_11.png');
+                this.load.image('enemy_left_attack1_12', img_source + '/enemy/left/attack1_12.png');
+                this.load.image('enemy_left_attack1_13', img_source + '/enemy/left/attack1_13.png');
+
+                this.load.image('enemy_left_die1_0', img_source + '/enemy/left/die1_0.png');
+                this.load.image('enemy_left_die1_1', img_source + '/enemy/left/die1_1.png');
+                this.load.image('enemy_left_die1_2', img_source + '/enemy/left/die1_2.png');
+                this.load.image('enemy_left_die1_3', img_source + '/enemy/left/die1_3.png');
+                this.load.image('enemy_left_die1_4', img_source + '/enemy/left/die1_4.png');
+                this.load.image('enemy_left_die1_5', img_source + '/enemy/left/die1_5.png');
+                this.load.image('enemy_left_die1_6', img_source + '/enemy/left/die1_6.png');
+                this.load.image('enemy_left_die1_7', img_source + '/enemy/left/die1_7.png');
+
+                this.load.image('enemy_left_move_0', img_source + '/enemy/left/move_0.png');
+                this.load.image('enemy_left_move_1', img_source + '/enemy/left/move_1.png');
+                this.load.image('enemy_left_move_2', img_source + '/enemy/left/move_2.png');
+                this.load.image('enemy_left_move_3', img_source + '/enemy/left/move_3.png');
+                this.load.image('enemy_left_move_4', img_source + '/enemy/left/move_4.png');
+                this.load.image('enemy_left_move_5', img_source + '/enemy/left/move_5.png');
+
+                this.load.image('enemy_left_stand_0', img_source + '/enemy/left/stand_0.png');
+                this.load.image('enemy_left_stand_1', img_source + '/enemy/left/stand_1.png');
+                this.load.image('enemy_left_stand_2', img_source + '/enemy/left/stand_2.png');
+                this.load.image('enemy_left_stand_3', img_source + '/enemy/left/stand_3.png');
+                this.load.image('enemy_left_stand_4', img_source + '/enemy/left/stand_4.png');
+                this.load.image('enemy_left_stand_5', img_source + '/enemy/left/stand_5.png');
+                ///////////////////////////////enemy right images
+                this.load.image('enemy_right_attack1_0', img_source + '/enemy/right/attack1_0.png');
+                this.load.image('enemy_right_attack1_1', img_source + '/enemy/right/attack1_1.png');
+                this.load.image('enemy_right_attack1_2', img_source + '/enemy/right/attack1_2.png');
+                this.load.image('enemy_right_attack1_3', img_source + '/enemy/right/attack1_3.png');
+                this.load.image('enemy_right_attack1_4', img_source + '/enemy/right/attack1_4.png');
+                this.load.image('enemy_right_attack1_5', img_source + '/enemy/right/attack1_5.png');
+                this.load.image('enemy_right_attack1_6', img_source + '/enemy/right/attack1_6.png');
+                this.load.image('enemy_right_attack1_7', img_source + '/enemy/right/attack1_7.png');
+                this.load.image('enemy_right_attack1_8', img_source + '/enemy/right/attack1_8.png');
+                this.load.image('enemy_right_attack1_9', img_source + '/enemy/right/attack1_9.png');
+                this.load.image('enemy_right_attack1_10', img_source + '/enemy/right/attack1_10.png');
+                this.load.image('enemy_right_attack1_11', img_source + '/enemy/right/attack1_11.png');
+                this.load.image('enemy_right_attack1_12', img_source + '/enemy/right/attack1_12.png');
+                this.load.image('enemy_right_attack1_13', img_source + '/enemy/right/attack1_13.png');
+
+                this.load.image('enemy_right_die1_0', img_source + '/enemy/right/die1_0.png');
+                this.load.image('enemy_right_die1_1', img_source + '/enemy/right/die1_1.png');
+                this.load.image('enemy_right_die1_2', img_source + '/enemy/right/die1_2.png');
+                this.load.image('enemy_right_die1_3', img_source + '/enemy/right/die1_3.png');
+                this.load.image('enemy_right_die1_4', img_source + '/enemy/right/die1_4.png');
+                this.load.image('enemy_right_die1_5', img_source + '/enemy/right/die1_5.png');
+                this.load.image('enemy_right_die1_6', img_source + '/enemy/right/die1_6.png');
+                this.load.image('enemy_right_die1_7', img_source + '/enemy/right/die1_7.png');
+
+                this.load.image('enemy_right_move_0', img_source + '/enemy/right/move_0.png');
+                this.load.image('enemy_right_move_1', img_source + '/enemy/right/move_1.png');
+                this.load.image('enemy_right_move_2', img_source + '/enemy/right/move_2.png');
+                this.load.image('enemy_right_move_3', img_source + '/enemy/right/move_3.png');
+                this.load.image('enemy_right_move_4', img_source + '/enemy/right/move_4.png');
+                this.load.image('enemy_right_move_5', img_source + '/enemy/right/move_5.png');
+
+                this.load.image('enemy_right_stand_0', img_source + '/enemy/right/stand_0.png');
+                this.load.image('enemy_right_stand_1', img_source + '/enemy/right/stand_1.png');
+                this.load.image('enemy_right_stand_2', img_source + '/enemy/right/stand_2.png');
+                this.load.image('enemy_right_stand_3', img_source + '/enemy/right/stand_3.png');
+                this.load.image('enemy_right_stand_4', img_source + '/enemy/right/stand_4.png');
+                this.load.image('enemy_right_stand_5', img_source + '/enemy/right/stand_5.png');
+
+
+
+                // Crude way to simulate loading large resources
+                var progressBar = this.add.graphics();
+                var progressBox = this.add.graphics();
+                progressBox.fillStyle(0x222222, 0.8);
+                progressBox.fillRect(DEFAULT_WIDTH / 2 - 160, DEFAULT_HEIGHT / 2 - 15, 320, 30);
+
+                var width = this.cameras.main.width;
+                var height = this.cameras.main.height;
+                var loadingText = this.make.text({
+                    x: width / 2,
+                    y: height / 2 - 50,
+                    text: 'Loading...',
+                    style: {
+                        font: '20px monospace',
+                        fill: '#ffffff'
+                    }
+                });
+                loadingText.setOrigin(0.5, 0.5);
+
+                this.load.on('progress', function (value) {
+                    console.log(value);
+                    progressBar.clear();
+                    progressBar.fillStyle(0xffffff, 1);
+                    progressBar.fillRect(DEFAULT_WIDTH / 2 - 155, DEFAULT_HEIGHT / 2 - 10, 310 * value, 20);
+                });
+                this.load.on('fileprogress', function (file) {
+                    console.log(file.src);
+                });
+                this.load.on('complete', function () {
+                    progressBar.destroy();
+                    progressBox.destroy();
+                    loadingText.destroy();
+                });
+
+            }
+
+
+            create() {
+
+                cursors = this.input.keyboard.createCursorKeys();
+
+                this.key_w = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+                this.key_s = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+                this.key_a = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+                this.key_d = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+
+                this.key_j = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J);
+                this.key_k = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.K);
+                this.key_l = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.L);
+
+                let bg = this.add.image(DEFAULT_WIDTH / 2, DEFAULT_HEIGHT / 2, 'bg');
+                bg.setScale(scale_rate);
+
+                // play music
+                sound_env = this.sound.add('sound_env');
+                sound_env.setLoop(true);
+                sound_env.setVolume(0.5);
+                sound_env.play();
+
+                player = this.physics.add.sprite(20, (DEFAULT_HEIGHT / 2) + ((1100 - bg_height / 2) * scale_rate), 'player_right_stand1_0');
+                player.setScale(player_scale_rate);
+                player.setBounce(0.1);
+                player.setCollideWorldBounds(true);
+                player.setOrigin(0.5, 1);
+
+                // set bounds so the camera won't go outside the game world
+                this.cameras.main.setBounds(0, DEFAULT_HEIGHT / 2 - bg_height * scale_rate / 2, DEFAULT_WIDTH, bg_height * scale_rate);
+                this.cameras.main.startFollow(player);
+                // this.cameras.main.setZoom(4);
+                this.cameras.main.setBackgroundColor('#ccccff');
+
+
+                ladders = this.physics.add.group({
+                    immovable: true, // This makes all elements in the group immovable by default
+                    allowGravity: false, // This disables gravity for all elements in the group
+                });
+                const generateLadders = (x1, y1, x2, y2) => {
+                    const rect = this.add.rectangle(x1 * scale_rate, (DEFAULT_HEIGHT / 2) + ((y1 - bg_height / 2) * scale_rate), (x2 - x1) * scale_rate, (y2 - y1) * scale_rate, 0xff0000);
+                    rect.setAlpha(0);
+                    rect.setOrigin(0, 0)
+                    this.physics.add.existing(rect);
+                    ladders.add(rect);
+                }
+                generateLadders(509, 636, 519, 1112);
+                generateLadders(1663, 577, 1670, 769);
+                generateLadders(2194, 698, 2244, 1012);
+                generateLadders(3918, 574, 3967, 797);
+                generateLadders(5220, 634, 5270, 997);
+                this.physics.add.overlap(player, ladders, this.touchLadders, null, this);
+
+
+                platforms = this.physics.add.staticGroup();
+                const createPlatforms = (x1, y1, x2, y2) => {
+                    platforms.create(x1 * scale_rate, (DEFAULT_HEIGHT / 2) + ((y1 - bg_height / 2) * scale_rate), null)
+                        .setAlpha(1)
+                        .setSize((x2 - x1) * scale_rate, (y2 - y1) * scale_rate)
+                        .setDisplaySize((x2 - x1) * scale_rate, (y2 - y1) * scale_rate)
+                        .setOrigin(0, 0).setAlpha(0)
+                        .refreshBody();
+                }
+
+                createPlatforms(0, 1187, 5505, 1338);
+                createPlatforms(5129, 1067, 5505, 1187);
+                createPlatforms(5100, 1096, 5130, 1187);
+                createPlatforms(5040, 1127, 5100, 1187);
+                createPlatforms(5010, 1157, 5040, 1187);
+                createPlatforms(3421, 1157, 3481, 1187);
+                createPlatforms(3390, 1126, 3420, 1187);
+                createPlatforms(3330, 1096, 3390, 1187);
+                createPlatforms(2219, 1067, 3330, 1187);
+                createPlatforms(2189, 1096, 2219, 1187);
+                createPlatforms(1499, 1127, 2189, 1187);
+                createPlatforms(1470, 1156, 1499, 1187);
+                createPlatforms(164, 647, 825, 737);
+                createPlatforms(884, 467, 1005, 496);
+                createPlatforms(974, 348, 1095, 376);
+                createPlatforms(1154, 587, 1725, 617);
+                createPlatforms(1200, 617, 1680, 647);
+                createPlatforms(1230, 647, 1650, 677);
+                createPlatforms(1694, 707, 2265, 737);
+                createPlatforms(1740, 737, 2265, 767);
+                createPlatforms(1770, 767, 2265, 797);
+                createPlatforms(1424, 767, 1635, 797);
+                createPlatforms(1604, 827, 1725, 856);
+                createPlatforms(1424, 887, 1635, 916);
+                createPlatforms(1514, 1007, 1635, 1036);
+                createPlatforms(1424, 1067, 1545, 1096);
+                createPlatforms(3314, 587, 4170, 616);
+                createPlatforms(3314, 616, 4210, 646);
+                createPlatforms(3314, 646, 4245, 676);
+                createPlatforms(3465, 857, 4005, 886);
+                createPlatforms(3434, 887, 4065, 916);
+                createPlatforms(3359, 916, 4110, 946);
+                createPlatforms(4649, 587, 5145, 616);
+                createPlatforms(4619, 616, 5145, 647);
+                createPlatforms(4574, 647, 5325, 677);
+                createPlatforms(4934, 677, 5325, 707);
+                createPlatforms(4934, 707, 5325, 737);
+
+                mainCollider = this.physics.add.collider(player, platforms);
+
+                this.anims.create({
+                    key: 'playerLeftAlert',
+                    frames: [
+                        { key: 'player_left_alert_0' },
+                        { key: 'player_left_alert_1' },
+                        { key: 'player_left_alert_2' },
+                        { key: 'player_left_alert_3' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'playerRightAlert',
+                    frames: [
+                        { key: 'player_right_alert_0' },
+                        { key: 'player_right_alert_1' },
+                        { key: 'player_right_alert_2' },
+                        { key: 'player_right_alert_3' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+                this.anims.create({
+                    key: 'playerLeftFly',
+                    frames: [
+                        { key: 'player_left_fly_0' },
+                        { key: 'player_left_fly_1' },
+                        { key: 'player_left_fly_2' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'playerRightFly',
+                    frames: [
+                        { key: 'player_right_fly_0' },
+                        { key: 'player_right_fly_1' },
+                        { key: 'player_right_fly_2' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+                this.anims.create({
+                    key: 'playerLeftJump',
+                    frames: [
+                        { key: 'player_left_jump_0' },
+                        { key: 'player_left_jump_1' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'playerRightJump',
+                    frames: [
+                        { key: 'player_right_jump_0' },
+                        { key: 'player_right_jump_1' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+                this.anims.create({
+                    key: 'playerLeftProne',
+                    frames: [
+                        { key: 'player_left_prone_0' },
+                        { key: 'player_left_prone_1' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'playerRightProne',
+                    frames: [
+                        { key: 'player_right_prone_0' },
+                        { key: 'player_right_prone_1' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+                this.anims.create({
+                    key: 'playerLeftProneStab',
+                    frames: [
+                        { key: 'player_left_proneStab_0' },
+                        { key: 'player_left_proneStab_1' },
+                        { key: 'player_left_proneStab_2' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'playerRightProneStab',
+                    frames: [
+                        { key: 'player_right_proneStab_0' },
+                        { key: 'player_right_proneStab_1' },
+                        { key: 'player_right_proneStab_2' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+                this.anims.create({
+                    key: 'playerLeftShoot1',
+                    frames: [
+                        { key: 'player_left_shoot1_0' },
+                        { key: 'player_left_shoot1_1' },
+                        { key: 'player_left_shoot1_2' },
+                        { key: 'player_left_shoot1_3' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'playerRightShoot1',
+                    frames: [
+                        { key: 'player_right_shoot1_0' },
+                        { key: 'player_right_shoot1_1' },
+                        { key: 'player_right_shoot1_2' },
+                        { key: 'player_right_shoot1_3' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+                this.anims.create({
+                    key: 'playerLeftShootF',
+                    frames: [
+                        { key: 'player_left_shootF_0' },
+                        { key: 'player_left_shootF_1' },
+                        { key: 'player_left_shootF_2' },
+                        { key: 'player_left_shootF_3' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'playerRightShootF',
+                    frames: [
+                        { key: 'player_right_shootF_0' },
+                        { key: 'player_right_shootF_1' },
+                        { key: 'player_right_shootF_2' },
+                        { key: 'player_right_shootF_3' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+                this.anims.create({
+                    key: 'playerLeftStabO1',
+                    frames: [
+                        { key: 'player_left_stabO1_0' },
+                        { key: 'player_left_stabO1_1' },
+                        { key: 'player_left_stabO1_2' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'playerRightStabO1',
+                    frames: [
+                        { key: 'player_right_stabO1_0' },
+                        { key: 'player_right_stabO1_1' },
+                        { key: 'player_right_stabO1_2' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+                this.anims.create({
+                    key: 'playerLeftStabO2',
+                    frames: [
+                        { key: 'player_left_stabO2_0' },
+                        { key: 'player_left_stabO2_1' },
+                        { key: 'player_left_stabO2_2' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'playerRightStabO2',
+                    frames: [
+                        { key: 'player_right_stabO2_0' },
+                        { key: 'player_right_stabO2_1' },
+                        { key: 'player_right_stabO2_2' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+                this.anims.create({
+                    key: 'playerLeftStand1',
+                    frames: [
+                        { key: 'player_left_stand1_0' },
+                        { key: 'player_left_stand1_1' },
+                        { key: 'player_left_stand1_2' },
+                        { key: 'player_left_stand1_3' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'playerRightStand1',
+                    frames: [
+                        { key: 'player_right_stand1_0' },
+                        { key: 'player_right_stand1_1' },
+                        { key: 'player_right_stand1_2' },
+                        { key: 'player_right_stand1_3' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+                this.anims.create({
+                    key: 'playerLeftSwingO1',
+                    frames: [
+                        { key: 'player_left_swingO1_0' },
+                        { key: 'player_left_swingO1_1' },
+                        { key: 'player_left_swingO1_2' },
+                        { key: 'player_left_swingO1_3' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'playerRightSwingO1',
+                    frames: [
+                        { key: 'player_right_swingO1_0' },
+                        { key: 'player_right_swingO1_1' },
+                        { key: 'player_right_swingO1_2' },
+                        { key: 'player_right_swingO1_3' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+                this.anims.create({
+                    key: 'playerLeftSwingO2',
+                    frames: [
+                        { key: 'player_left_swingO2_0' },
+                        { key: 'player_left_swingO2_1' },
+                        { key: 'player_left_swingO2_2' },
+                        { key: 'player_left_swingO2_3' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'playerRightSwingO2',
+                    frames: [
+                        { key: 'player_right_swingO2_0' },
+                        { key: 'player_right_swingO2_1' },
+                        { key: 'player_right_swingO2_2' },
+                        { key: 'player_right_swingO2_3' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+                this.anims.create({
+                    key: 'playerLeftSwingO3',
+                    frames: [
+                        { key: 'player_left_swingO3_0' },
+                        { key: 'player_left_swingO3_1' },
+                        { key: 'player_left_swingO3_2' },
+                        { key: 'player_left_swingO3_3' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'playerRightSwingO3',
+                    frames: [
+                        { key: 'player_right_swingO3_0' },
+                        { key: 'player_right_swingO3_1' },
+                        { key: 'player_right_swingO3_2' },
+                        { key: 'player_right_swingO3_3' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+                this.anims.create({
+                    key: 'playerLeftWalk1',
+                    frames: [
+                        { key: 'player_left_walk1_0' },
+                        { key: 'player_left_walk1_1' },
+                        { key: 'player_left_walk1_2' },
+                        { key: 'player_left_walk1_3' },
+                        { key: 'player_left_walk1_4' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'playerRightWalk1',
+                    frames: [
+                        { key: 'player_right_walk1_0' },
+                        { key: 'player_right_walk1_1' },
+                        { key: 'player_right_walk1_2' },
+                        { key: 'player_right_walk1_3' },
+                        { key: 'player_right_walk1_4' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+                this.anims.create({
+                    key: 'playerClimb',
+                    frames: [
+                        { key: 'player_climb' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+                //enemy animations
+                this.anims.create({
+                    key: 'enemyLeftAttack',
+                    frames: [
+                        { key: 'enemy_left_attack1_0' },
+                        { key: 'enemy_left_attack1_1' },
+                        { key: 'enemy_left_attack1_2' },
+                        { key: 'enemy_left_attack1_3' },
+                        { key: 'enemy_left_attack1_4' },
+                        { key: 'enemy_left_attack1_5' },
+                        { key: 'enemy_left_attack1_6' },
+                        { key: 'enemy_left_attack1_7' },
+                        { key: 'enemy_left_attack1_8' },
+                        { key: 'enemy_left_attack1_9' },
+                        { key: 'enemy_left_attack1_10' },
+                        { key: 'enemy_left_attack1_11' },
+                        { key: 'enemy_left_attack1_12' },
+                        { key: 'enemy_left_attack1_13' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: 0
+                });
+                this.anims.create({
+                    key: 'enemyRightAttack',
+                    frames: [
+                        { key: 'enemy_right_attack1_0' },
+                        { key: 'enemy_right_attack1_1' },
+                        { key: 'enemy_right_attack1_2' },
+                        { key: 'enemy_right_attack1_3' },
+                        { key: 'enemy_right_attack1_4' },
+                        { key: 'enemy_right_attack1_5' },
+                        { key: 'enemy_right_attack1_6' },
+                        { key: 'enemy_right_attack1_7' },
+                        { key: 'enemy_right_attack1_8' },
+                        { key: 'enemy_right_attack1_9' },
+                        { key: 'enemy_right_attack1_10' },
+                        { key: 'enemy_right_attack1_11' },
+                        { key: 'enemy_right_attack1_12' },
+                        { key: 'enemy_right_attack1_13' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: 0
+                });
+
+
+                this.anims.create({
+                    key: 'enemyLeftDie',
+                    frames: [
+                        { key: 'enemy_left_die1_0' },
+                        { key: 'enemy_left_die1_1' },
+                        { key: 'enemy_left_die1_2' },
+                        { key: 'enemy_left_die1_3' },
+                        { key: 'enemy_left_die1_4' },
+                        { key: 'enemy_left_die1_5' },
+                        { key: 'enemy_left_die1_6' },
+                        { key: 'enemy_left_die1_7' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: 0
+                });
+                this.anims.create({
+                    key: 'enemyRightDie',
+                    frames: [
+                        { key: 'enemy_right_die1_0' },
+                        { key: 'enemy_right_die1_1' },
+                        { key: 'enemy_right_die1_2' },
+                        { key: 'enemy_right_die1_3' },
+                        { key: 'enemy_right_die1_4' },
+                        { key: 'enemy_right_die1_5' },
+                        { key: 'enemy_right_die1_6' },
+                        { key: 'enemy_right_die1_7' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: 0
+                });
+
+
+                this.anims.create({
+                    key: 'enemyLeftMove',
+                    frames: [
+                        { key: 'enemy_left_move_0' },
+                        { key: 'enemy_left_move_1' },
+                        { key: 'enemy_left_move_2' },
+                        { key: 'enemy_left_move_3' },
+                        { key: 'enemy_left_move_4' },
+                        { key: 'enemy_left_move_5' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'enemyRightMove',
+                    frames: [
+                        { key: 'enemy_right_move_0' },
+                        { key: 'enemy_right_move_1' },
+                        { key: 'enemy_right_move_2' },
+                        { key: 'enemy_right_move_3' },
+                        { key: 'enemy_right_move_4' },
+                        { key: 'enemy_right_move_5' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+                this.anims.create({
+                    key: 'enemyLeftStand',
+                    frames: [
+                        { key: 'enemy_left_stand_0' },
+                        { key: 'enemy_left_stand_1' },
+                        { key: 'enemy_left_stand_2' },
+                        { key: 'enemy_left_stand_3' },
+                        { key: 'enemy_left_stand_4' },
+                        { key: 'enemy_left_stand_5' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+                this.anims.create({
+                    key: 'enemyRightStand',
+                    frames: [
+                        { key: 'enemy_right_stand_0' },
+                        { key: 'enemy_right_stand_1' },
+                        { key: 'enemy_right_stand_2' },
+                        { key: 'enemy_right_stand_3' },
+                        { key: 'enemy_right_stand_4' },
+                        { key: 'enemy_right_stand_5' },
+                    ],
+                    frameRate: frameRate,
+                    repeat: frameRepeat
+                });
+
+
+
+
+                for (let i = 0; i < spawns.length; i++) {
+                    enemies[i] = this.physics.add.group();
+                }
+                const generateEnemy = (x, y, i) => {
+                    const enemy = this.physics.add.sprite(x * scale_rate, (DEFAULT_HEIGHT / 2) + ((y - bg_height / 2) * scale_rate), 'enemy_right_attack1_6');
+                    enemy.setScale(enemy_scale_rate);
+                    // enemy.setOffset(0, 150 * scale_rate)
+                    enemy.setBounce(0.1);
+                    enemy.setCollideWorldBounds(true);
+                    // enemy.setOrigin(0.5, 1);
+                    enemy.anims.play('enemyLeftAttack', true);
+                    enemy.look_direction = Phaser.Math.Between(0, 1) === 0 ? -1 : 1;
+                    enemy.status = 'stand';
+                    setTimeout(() => {
+                        enemy.status = 'move';
+                    }, 500);
+                    enemies[i].add(enemy);
+                }
+                for (let i = 0; i < spawns.length; i++) {
+                    for (let j = 0; j < spawns[i].num; j++) {
+                        generateEnemy(Phaser.Math.Between(spawns[i].x - 150, spawns[i].x + 150), spawns[i].y, i);
+                    }
+
+                }
+
+                enemies.forEach(enemy => {
+                    this.physics.add.collider(enemy, platforms);
+                    this.physics.add.overlap(player, enemy);
+                });
+
+            }
+
+            update() {
+
+                this.updatePlayer();
+                this.updateEnemy(this.physics, this.anims);
+
+            }
+
+            touchLadders(player, ladder) {
+                mainCollider.active = false;
+                isClimbing = true;
+                player.body.allowGravity = false;
+                player.anims.play('playerClimb', true);
+                if (cursors.left.isDown || this.key_a.isDown) {
+                    player.setVelocityX(-speedHori * 2 * scale_rate);
+                    player.anims.play('playerLeftWalk1', true);
+                    look_direction = -1;
+                }
+                else if (cursors.right.isDown || this.key_d.isDown) {
+                    player.setVelocityX(speedHori * 2 * scale_rate);
+                    player.anims.play('playerRightWalk1', true);
+                    look_direction = 1;
+                }
+                else if (cursors.down.isDown || this.key_s.isDown) {
+                    if (player.y >= (ladder.y + ladder.height - 1 * scale_rate)) {
+                        player.y += 8 * scale_rate;
+                    }
+                    else {
+                        player.setVelocityY(speedVert * scale_rate);
+                    }
+                }
+                else {
+                    this.tweens.add({
+                        targets: player,
+                        x: ladder.x + ladder.width / 2,
+                        duration: 100,
+                        ease: 'Power2',
+                    });
+                }
+            }
+
+            updateEnemy(physics, anims) {
+                const generateEnemy = (x, y, i) => {
+                    const enemy = this.physics.add.sprite(x * scale_rate, (DEFAULT_HEIGHT / 2) + ((y - bg_height / 2) * scale_rate), 'enemy_right_attack1_6');
+                    enemy.setScale(enemy_scale_rate);
+                    // enemy.setOffset(0, 150 * scale_rate)
+                    enemy.setBounce(0.1);
+                    enemy.setCollideWorldBounds(true);
+                    // enemy.setOrigin(0.5, 1);
+                    enemy.anims.play('enemyLeftAttack', true);
+                    enemy.look_direction = Phaser.Math.Between(0, 1) === 0 ? -1 : 1;
+                    enemy.status = 'stand';
+                    setTimeout(() => {
+                        enemy.status = 'move';
+                    }, 500);
+                    enemies[i].add(enemy);
+                }
+
+                enemies.forEach(async (enemy, i) => {
+                    await enemy.children.iterate(async function (child) {
+                        if (!child) {
+                            console.error('Child sprite is null or undefined.');
+                            return;
+                        }
+
+                        if (child.status == 'die') {
+                            child.setVelocityX(0);
+
+                            if (child.look_direction == -1) {
+                                await child.anims.play('enemyLeftDie', true);
+
+                                child.once('animationcomplete', async function (animation, frame) {
+                                    if (animation.key === 'enemyLeftDie') {
+                                        child.destroy();
+                                        await new Promise(resolve => setTimeout(resolve, 1000));
+                                        if (enemies[i].countActive(true) < spawns[i].num) {
+                                            generateEnemy(Phaser.Math.Between(spawns[i].x - 150, spawns[i].x + 150), spawns[i].y, i);
+                                        }
+                                    }
+                                });
+                            } else if (child.look_direction == 1) {
+                                await child.anims.play('enemyRightDie', true);
+
+                                child.once('animationcomplete', async function (animation, frame) {
+                                    if (animation.key === 'enemyRightDie') {
+                                        child.destroy();
+                                        await new Promise(resolve => setTimeout(resolve, 1000));
+                                        if (enemies[i].countActive(true) < spawns[i].num) {
+                                            generateEnemy(Phaser.Math.Between(spawns[i].x - 150, spawns[i].x + 150), spawns[i].y, i);
+                                        }
+                                    }
+                                });
+                            }
+                            return;
+                        } else {
+                            if (child.status != 'die' && player.x >= spawns[i].xStart * scale_rate && player.x <= spawns[i].xEnd * scale_rate && player.y >= child.y - 40 * scale_rate && player.y <= child.y + 100 * scale_rate) {
+                                if (player.x + player.width * scale_rate < child.x) {
+                                    await child.anims.play('enemyLeftMove', true);
+                                    child.setVelocityX(-speedHori * 0.7 * scale_rate);
+                                }
+                                else if (player.x - player.width * scale_rate > child.x) {
+                                    await child.anims.play('enemyRightMove', true);
+                                    child.setVelocityX(speedHori * 0.7 * scale_rate);
+                                }
+                                else if (child.x <= player.x + player.width * scale_rate && child.x >= player.x - player.width * scale_rate) {
+                                    child.setVelocityX(0);
+                                    if (child.look_direction == -1) {
+                                        await child.anims.play('enemyLeftAttack', true);
+                                    }
+                                    else if (child.look_direction == 1) {
+                                        await child.anims.play('enemyRightAttack', true);
+                                    }
+                                }
+                                else if (physics.overlap(player, child)) {
+                                    child.status = 'die';
+                                }
+                            } else {
+                                if (child.status == 'stand') {
+                                    if (child.look_direction == -1) {
+                                        if (child.x > spawns[i].xStart * scale_rate) {
+                                            await child.anims.play('enemyLeftStand', true);
+                                            child.setVelocityX(0);
+                                        } else {
+                                            child.look_direction = 1;
+                                        }
+                                    } else if (child.look_direction == 1) {
+                                        if (child.x < spawns[i].xEnd * scale_rate) {
+                                            await child.anims.play('enemyRightStand', true);
+                                            child.setVelocityX(0);
+                                        } else {
+                                            child.look_direction = -1;
+                                        }
+                                    }
+                                } else if (child.status == 'move') {
+                                    if (child.look_direction == -1) {
+                                        if (child.x > spawns[i].xStart * scale_rate) {
+                                            await child.anims.play('enemyLeftMove', true);
+                                            child.setVelocityX(-speedHori * 0.7 * scale_rate);
+                                        } else {
+                                            child.look_direction = 1;
+                                        }
+                                    } else if (child.look_direction == 1) {
+                                        if (child.x < spawns[i].xEnd * scale_rate) {
+                                            await child.anims.play('enemyRightMove', true);
+                                            child.setVelocityX(speedHori * 0.7 * scale_rate);
+                                        } else {
+                                            child.look_direction = -1;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                    });
+                });
+
+            }
+
+            updatePlayer() {
+                mainCollider.active = true;
+                if (this.physics.overlap(player, ladders)) {
+                    mainCollider.active = false;
+                    isClimbing = true;
+                    player.body.allowGravity = false;
+                    player.anims.play('playerClimb', true);
+                } else {
+                    mainCollider.active = true;
+                    isClimbing = false;
+                    player.body.allowGravity = true;
+                }
+
+                player.setOffset(0, 0);
+                player.setVelocityX(0);
+
+                if (cursors.left.isDown || this.key_a.isDown) {
+                    player.setVelocityX(-speedHori * scale_rate);
+                    player.anims.play('playerLeftWalk1', true);
+                    look_direction = -1;
+                }
+                else if (cursors.right.isDown || this.key_d.isDown) {
+                    player.setVelocityX(speedHori * scale_rate);
+                    player.anims.play('playerRightWalk1', true);
+                    look_direction = 1;
+                }
+                else if (cursors.down.isDown || this.key_s.isDown) {
+                    if (isClimbing) {
+                        // player.setVelocityY(speedVert * scale_rate);
+                        return;
+                    }
+                    player.setOffset(0, -player.height * 0.6);
+                    if (look_direction == 1) {
+                        player.anims.play('playerRightProne', true);
+                    }
+                    else if (look_direction == -1) {
+                        player.anims.play('playerLeftProne', true);
+                    }
+                }
+                else if (this.key_k.isDown) {
+                    // isAttackAnimating = true;
+                    if (look_direction == 1) {
+                        player.anims.play('playerRightStabO1', true);
+                    }
+                    else if (look_direction == -1) {
+                        player.anims.play('playerLeftStabO1', true);
+                    }
+                }
+                else if (this.key_l.isDown) {
+                    // isAttackAnimating = true;
+                    if (look_direction == 1) {
+                        player.anims.play('playerRightSwingO3', true);
+                    }
+                    else if (look_direction == -1) {
+                        player.anims.play('playerLeftSwingO3', true);
+                    }
+                }
+                else if (isClimbing && (this.key_w.isDown || cursors.up.isDown)) {
+                    player.setVelocityY(-speedVert * scale_rate);
+                }
+                else {
+                    // if (isAttackAnimating) return;
+                    if (isClimbing) {
+                        player.setVelocityY(0);
+                        return;
+                    }
+                    if (look_direction == 1) {
+                        player.anims.play('playerRightStand1', true);
+                    }
+                    else if (look_direction == -1) {
+                        player.anims.play('playerLeftStand1', true);
+                    }
+                }
+
+
+                if (!isClimbing && (this.key_w.isDown || cursors.up.isDown) && player.body.touching.down) {
+                    player.setVelocityY(-700 * scale_rate);
+                }
+            }
+
+        }
+
+
+        var config = {
+            type: Phaser.AUTO,
+            width: DEFAULT_WIDTH,
+            height: DEFAULT_HEIGHT,
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 300 },
+                    debug: false
+                }
+            },
+            scene: [SceneA]
+        };
+
+        var game = new Phaser.Game(config);
+
+
+    </script>
+
+</body>
+
+</html>
